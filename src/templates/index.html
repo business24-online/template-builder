@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Template Builder</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/template-builder/css/styles.css">
+<script src="/template-builder/js/script.js"></script>
+<style>
+*{scrollbar-width:thin}
+.btn{border:1px solid #e5e7eb;background:#fff;border-radius:6px;padding:2px 6px;font-size:10px;color:#6b7280;transition:all .15s;cursor:pointer}
+.btn:hover{border-color:#93c5fd;color:#2563eb}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-paste{border:1px dashed #fdba74;background:#fff;border-radius:6px;padding:2px 6px;font-size:10px;color:#f97316;transition:all .15s;cursor:pointer}
+.btn-paste:hover{border-color:#fb923c;color:#ea580c}
+.btn-action{font-size:10px;padding:2px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;color:#6b7280;transition:all .15s;cursor:pointer}
+.btn-action:hover{background:#eff6ff;border-color:#93c5fd;color:#2563eb}
+.btn-danger{font-size:10px;padding:2px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;color:#6b7280;transition:all .15s;cursor:pointer}
+.btn-danger:hover{background:#fef2f2;border-color:#fca5a5;color:#dc2626}
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+<div id="app" class="min-h-screen flex flex-col"></div>
+
+<script>
+// ─── Constants ──────────────────────────────────────────────────────────────
+const TYPES = ["text","textarea","email","url","tel","date","number","select","file","color","image","label","paragraph","img"]
+const INPUT_TYPES = ["text","textarea","email","url","tel","date","number","select","file","color","image"]
+const VIEW_TYPES = ["label","paragraph","img"]
+
+const CONTAINER_LAYOUTS = [
+  { id:'div', label:'Normal', defaultClass:'template-container-normal', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>' },
+  { id:'vertical', label:'Vertical', defaultClass:'template-container-vertical', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>' },
+  { id:'horizontal', label:'Horizontal', defaultClass:'template-container-horizontal', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="4" x2="6" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="18" y1="4" x2="18" y2="20"/><path d="M2 4h20v16H2z" fill="none" opacity="0"/></svg>' },
+  { id:'flex', label:'Flex', defaultClass:'template-container-flex', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>' },
+  { id:'grid', label:'Grid', defaultClass:'template-container-grid', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>' }
+]
+
+const ALLOWED_ATTRS = {
+  text:["placeholder","required","default","minlength","maxlength","pattern","autocomplete","className","id","style","disabled","readonly"],
+  email:["placeholder","required","default","minlength","maxlength","pattern","autocomplete","className","id","style","disabled","readonly"],
+  url:["placeholder","required","default","minlength","maxlength","pattern","autocomplete","className","id","style","disabled","readonly"],
+  tel:["placeholder","required","default","minlength","maxlength","pattern","autocomplete","className","id","style","disabled","readonly"],
+  textarea:["placeholder","required","default","minlength","maxlength","pattern","rows","cols","autocomplete","className","id","style","disabled","readonly"],
+  number:["placeholder","required","default","min","max","step","className","id","style","disabled","readonly"],
+  date:["placeholder","required","default","min","max","className","id","style","disabled","readonly"],
+  select:["placeholder","required","default","options","className","id","style","disabled","readonly"],
+  file:["required","default","accept","multiple","className","id","style","disabled","readonly"],
+  color:["required","default","className","id","style","disabled","readonly"],
+  image:["required","default","accept","multiple","className","id","style","disabled","readonly"],
+  label:["content","className","id","style"],
+  paragraph:["content","className","id","style"],
+  img:["content","alt","className","id","style"]
+}
+
+const SVG_MAP = {
+  text:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+  textarea:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>',
+  email:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>',
+  url:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
+  tel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>',
+  date:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  number:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
+  select:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="8 12 12 16 16 12"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  color:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" opacity="0.4"/><path d="M21 15l-5-5L5 21"/><path d="M15 3v4M13 5h4"/></svg>',
+  label:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H2v7l6.29 6.29a1 1 0 001.41 0l5.58-5.58a1 1 0 000-1.41L9 5z"/><line x1="6" y1="9" x2="6.01" y2="9"/></svg>',
+  paragraph:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="18" y2="14"/><line x1="4" y1="18" x2="12" y2="18"/></svg>',
+  img:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+}
+
+// ─── Utilities ──────────────────────────────────────────────────────────────
+let _uid = Date.now()
+const uid = () => 'f' + (_uid++)
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')
+const clone = o => JSON.parse(JSON.stringify(o))
+const $ = (s, p) => (p||document).querySelector(s)
+const $$ = (s, p) => [...(p||document).querySelectorAll(s)]
+
+const inputTypes = ['text','textarea','email','url','tel','date','number','select']
+
+
+function getParentArr(schema, path) {
+  if (!path||path.length===0) return schema
+  let arr = schema
+  for (let i=0;i<path.length-1;i++) arr = arr[path[i]].fields
+  return arr
+}
+
+function getContainerFields(schema, path) {
+  if (!path||path.length===0) return schema
+  let arr = schema
+  for (let i=0;i<path.length;i++) arr = arr[path[i]].fields
+  return arr
+}
+
+function buildFieldObj(item) {
+  const attrs = {...item.el_attrs}
+  if (attrs.optionsText) { try{attrs.options=JSON.parse(attrs.optionsText)}catch{}; delete attrs.optionsText }
+  const allowed = ALLOWED_ATTRS[item.type]||[]
+  const prop = VIEW_TYPES.includes(item.type)?'view_field':'input_field'
+  const clean = {property:prop,type:item.type}
+  for (const k of allowed) if (attrs[k]!==undefined&&attrs[k]!==''&&attrs[k]!==false) clean[k]=attrs[k]
+  return clean
+}
+
+function buildGroup(item) {
+  const fields = {}
+  for (const f of item.fields||[]) fields[f.key] = f.property==='group' ? buildGroup(f) : buildFieldObj(f)
+  const g = {property:'group'}
+  if (item.repeatable) g.repeatable=true
+  if (item.layout&&item.layout!=='vertical') g.layout=item.layout
+  if (item.el_attrs?.className) g.className=item.el_attrs.className
+  if (item.el_attrs?.style) g.style=item.el_attrs.style
+  g.fields = fields
+  return g
+}
+
+function buildOutputObj(schema) {
+  const obj = {}
+  for (const item of schema) obj[item.key] = item.property==='group' ? buildGroup(item) : buildFieldObj(item)
+  return obj
+}
+
+function normalizeSchema(obj) {
+  return Object.entries(obj||{}).map(([key,val])=>{
+    if (val.property==='group') {
+      const fields = val.fields ? normalizeSchema(val.fields) : []
+      const elAttrs = {}
+      if (val.className) elAttrs.className=val.className
+      if (val.style) elAttrs.style=val.style
+      return {_id:uid(),property:'group',key,layout:val.layout||'vertical',repeatable:val.repeatable===true,el_attrs:Object.keys(elAttrs).length?elAttrs:undefined,fields}
+    }
+    let prop = val.property
+    if (prop==='field') prop=VIEW_TYPES.includes(val.type)?'view_field':'input_field'
+    return {_id:uid(),property:prop,key,type:val.type,el_attrs:{...val}}
+  })
+}
+
+// ─── Store ──────────────────────────────────────────────────────────────────
+function createStore(initial) {
+  let state = initial
+  const listeners = new Set()
+  return {
+    get() { return state },
+    set(partial) {
+      state = {...state,...partial}
+      listeners.forEach(fn=>fn(state))
+    },
+    mutate(fn) { fn(state); listeners.forEach(fn=>fn(state)) },
+    on(fn) { listeners.add(fn); return ()=>listeners.delete(fn) }
+  }
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
+const app = {
+  el: null,
+  store: createStore({
+    schema:[],
+    templateName:'',
+    saveStatus:'saved',
+    previewTab:'form',
+    clipboard:null,
+    modalVisible:false,
+    modalType:'context',
+    modalConfirm:null,
+    sectionName:'',
+    sectionRepeatable:false,
+    sectionLayout:'vertical',
+    sectionElAttrs:{className:'',style:''},
+    fieldKey:'',
+    fieldType:'text',
+    fieldElAttrs:{},
+    editingSectionIdx:-1,
+    editingFieldIdx:-1,
+    editingFieldParent:undefined,
+    insertAfterIdx:-1,
+    insertAfterParent:undefined,
+    nestedInsertPath:null,
+    nestedInsertIdx:-1,
+    nestedEditPath:null,
+    repeatInstances:{},
+  }),
+
+  init() {
+    this.el = $('#app')
+    this.store.on(()=>this.render())
+    this.loadSchema()
+    this.loadMetadata()
+    this.render()
+  },
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  loadSchema() {
+    fetch('/template-builder/api/schema').then(r=>r.json()).then(data=>{
+      this.store.mutate(s=>{ s.schema=normalizeSchema(data) })
+    })
+  },
+
+  loadMetadata() {
+    fetch('/template-builder/api/project-metadata').then(r=>r.json()).then(data=>{
+      if (data.template) {
+        this.store.mutate(s=>{ s.templateName=data.template })
+        document.title='Template Builder — '+data.template
+      }
+    }).catch(()=>{})
+  },
+
+  saveSchema() {
+    this.store.mutate(s=>{ s.saveStatus='saving' })
+    const raw = buildOutputObj(this.store.get().schema)
+    fetch('/template-builder/api/schema',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(raw)})
+      .then(r=>{ if(!r.ok)throw Error(); this.store.mutate(s=>{ s.saveStatus='saved' }) })
+      .catch(()=>{ this.store.mutate(s=>{ s.saveStatus='error' }) })
+  },
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  setTab(tab) {
+    this.store.mutate(s=>{ s.previewTab=tab })
+  },
+
+  // ── Clipboard ─────────────────────────────────────────────────────────────
+  copyItem(idx,parent) {
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    this.store.mutate(s=>{ s.clipboard={item:clone(arr[idx]),fromIdx:idx,fromParent:parent} })
+  },
+  cutItem(idx,parent) {
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    this.store.mutate(s=>{ s.clipboard={item:clone(arr[idx]),fromIdx:idx,fromParent:parent} })
+    arr.splice(idx,1)
+    this.saveSchema()
+  },
+  duplicateItem(idx,parent) {
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    const item = clone(arr[idx]); item._id=uid()
+    arr.splice(idx+1,0,item)
+    this.saveSchema()
+  },
+  pasteAbove(idx,parent) {
+    if (!this.store.get().clipboard) return
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    const item = clone(this.store.get().clipboard.item); item._id=uid()
+    arr.splice(idx,0,item)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+  pasteBelow(idx,parent) {
+    if (!this.store.get().clipboard) return
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    const item = clone(this.store.get().clipboard.item); item._id=uid()
+    arr.splice(idx+1,0,item)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+
+  // ── Path-based operations ─────────────────────────────────────────────────
+  copyItemByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    this.store.mutate(s=>{ s.clipboard={item:clone(arr[idx]),fromIdx:idx,fromParent:path} })
+  },
+  cutItemByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    this.store.mutate(s=>{ s.clipboard={item:clone(arr[idx]),fromIdx:idx,fromParent:path} })
+    arr.splice(idx,1); this.saveSchema()
+  },
+  duplicateItemByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    const item = clone(arr[idx]); item._id=uid()
+    arr.splice(idx+1,0,item); this.saveSchema()
+  },
+  pasteAboveByPath(path) {
+    if (!this.store.get().clipboard) return
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    const item = clone(this.store.get().clipboard.item); item._id=uid()
+    arr.splice(idx,0,item)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+  pasteBelowByPath(path,insertAfter) {
+    if (!this.store.get().clipboard) return
+    if (insertAfter===undefined) { insertAfter=path[path.length-1]; path=path.slice(0,-1) }
+    const arr = getContainerFields(this.store.get().schema,path)
+    const item = clone(this.store.get().clipboard.item); item._id=uid()
+    arr.splice(insertAfter+1,0,item)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+  moveItemByPath(path,dir) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    if (dir==='up'&&idx>0) { const t=arr[idx-1]; arr[idx-1]=arr[idx]; arr[idx]=t }
+    else if (dir==='down'&&idx<arr.length-1) { const t=arr[idx+1]; arr[idx+1]=arr[idx]; arr[idx]=t }
+    else if (dir==='top'&&idx>0) { const i=arr.splice(idx,1)[0]; arr.unshift(i) }
+    else if (dir==='bottom'&&idx<arr.length-1) { const i=arr.splice(idx,1)[0]; arr.push(i) }
+    this.saveSchema()
+  },
+  removeItemByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    arr.splice(path[path.length-1],1)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+  editFieldByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]
+    const item = arr[idx]
+    this.store.mutate(s=>{
+      s.editingFieldIdx=idx; s.editingFieldParent=-2; s.nestedEditPath=path
+      s.fieldType=item.type; s.fieldKey=item.key; s.fieldElAttrs={...item.el_attrs}
+      if (s.fieldElAttrs.options&&Array.isArray(s.fieldElAttrs.options))
+        s.fieldElAttrs.optionsText=JSON.stringify(s.fieldElAttrs.options,null,2)
+    })
+    this.showFieldModal('Edit')
+  },
+
+  // ── Move operations ───────────────────────────────────────────────────────
+  moveUp(idx,parent) {
+    if (idx===0) return
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    const t=arr[idx-1]; arr[idx-1]=arr[idx]; arr[idx]=t; this.saveSchema()
+  },
+  moveDown(idx,parent) {
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    if (idx>=arr.length-1) return
+    const t=arr[idx+1]; arr[idx+1]=arr[idx]; arr[idx]=t; this.saveSchema()
+  },
+  moveToTop(idx,parent) {
+    if (idx===0) return
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    const i=arr.splice(idx,1)[0]; arr.unshift(i); this.saveSchema()
+  },
+  moveToBottom(idx,parent) {
+    const arr = parent!==undefined&&parent>=0 ? this.store.get().schema[parent].fields : this.store.get().schema
+    if (idx>=arr.length-1) return
+    const i=arr.splice(idx,1)[0]; arr.push(i); this.saveSchema()
+  },
+
+  // ── Section operations ────────────────────────────────────────────────────
+  removeSection(idx) {
+    this.store.get().schema.splice(idx,1)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+
+  editSection(idx) {
+    const item = this.store.get().schema[idx]
+    this.store.mutate(s=>{
+      s.editingSectionIdx=idx
+      s.sectionName=item.key
+      s.sectionRepeatable=!!item.repeatable
+      s.sectionLayout=item.layout||'vertical'
+      s.sectionElAttrs={className:item.el_attrs?.className||'',style:item.el_attrs?.style||''}
+    })
+    this.showSectionModal('Edit')
+  },
+
+  editContainerByPath(path) {
+    const arr = getParentArr(this.store.get().schema,path)
+    const idx = path[path.length-1]; const item = arr[idx]
+    this.store.mutate(s=>{
+      s.editingSectionIdx=-2; s.nestedEditPath=path
+      s.sectionName=item.key; s.sectionRepeatable=!!item.repeatable
+      s.sectionLayout=item.layout||'vertical'
+      s.sectionElAttrs={className:item.el_attrs?.className||'',style:item.el_attrs?.style||''}
+    })
+    this.showSectionModal('Edit Container')
+  },
+
+  confirmSection() {
+    const state = this.store.get()
+    const key = slugify(state.sectionName)
+    if (!key) return
+    const elAttrs = {}
+    if (state.sectionElAttrs.className) elAttrs.className=state.sectionElAttrs.className
+    if (state.sectionElAttrs.style) elAttrs.style=state.sectionElAttrs.style
+
+    if (state.editingSectionIdx>=0) {
+      const s = this.store.get().schema[state.editingSectionIdx]
+      s.key=key; s.repeatable=state.sectionRepeatable; s.layout=state.sectionLayout
+      s.el_attrs=Object.keys(elAttrs).length?elAttrs:undefined
+    } else if (state.nestedEditPath) {
+      const arr = getParentArr(this.store.get().schema,state.nestedEditPath)
+      const idx = state.nestedEditPath[state.nestedEditPath.length-1]
+      arr[idx].key=key; arr[idx].repeatable=state.sectionRepeatable
+      arr[idx].layout=state.sectionLayout
+      arr[idx].el_attrs=Object.keys(elAttrs).length?elAttrs:undefined
+    } else {
+      const item = {_id:uid(),property:'group',key,layout:state.sectionLayout,repeatable:state.sectionRepeatable,el_attrs:Object.keys(elAttrs).length?elAttrs:undefined,fields:[]}
+      if (state.nestedInsertPath) {
+        const arr = getContainerFields(this.store.get().schema,state.nestedInsertPath)
+        arr.splice(state.nestedInsertIdx+1,0,item)
+        this.store.mutate(s=>{ s.nestedInsertPath=null; s.nestedInsertIdx=-1 })
+      } else if (state.insertAfterIdx>=0) {
+        const arr = state.insertAfterParent>=0 ? this.store.get().schema[state.insertAfterParent].fields : this.store.get().schema
+        arr.splice(state.insertAfterIdx+1,0,item)
+        this.store.mutate(s=>{ s.insertAfterIdx=-1 })
+      } else if (state.insertAfterParent>=0) {
+        this.store.get().schema[state.insertAfterParent].fields.push(item)
+        this.store.mutate(s=>{ s.insertAfterParent=undefined })
+      } else {
+        this.store.get().schema.push(item)
+      }
+    }
+    this.closeModal(); this.saveSchema()
+  },
+
+  // ── Field operations ──────────────────────────────────────────────────────
+  removeField(idx,sectionIdx) {
+    if (sectionIdx>=0) this.store.get().schema[sectionIdx].fields.splice(idx,1)
+    else this.store.get().schema.splice(idx,1)
+    this.store.mutate(s=>{ s.clipboard=null })
+    this.saveSchema()
+  },
+
+  editField(idx,sectionIdx) {
+    const state = this.store.get()
+    const item = sectionIdx>=0 ? state.schema[sectionIdx].fields[idx] : state.schema[idx]
+    this.store.mutate(s=>{
+      s.editingFieldIdx=idx; s.editingFieldParent=sectionIdx!==undefined?sectionIdx:undefined
+      s.fieldType=item.type; s.fieldKey=item.key; s.fieldElAttrs={...item.el_attrs}
+      if (s.fieldElAttrs.options&&Array.isArray(s.fieldElAttrs.options))
+        s.fieldElAttrs.optionsText=JSON.stringify(s.fieldElAttrs.options,null,2)
+    })
+    this.showFieldModal('Edit')
+  },
+
+  confirmField() {
+    const state = this.store.get()
+    const key = slugify(state.fieldKey)
+    if (!key) return
+    const attrs = {...state.fieldElAttrs}
+    if (attrs.optionsText) { try{attrs.options=JSON.parse(attrs.optionsText)}catch{}; delete attrs.optionsText }
+    const prop = VIEW_TYPES.includes(state.fieldType)?'view_field':'input_field'
+    const obj = {_id:uid(),property:prop,key,type:state.fieldType,el_attrs:attrs}
+
+    if (state.editingFieldIdx>=0) {
+      if (state.nestedEditPath) {
+        const arr = getParentArr(this.store.get().schema,state.nestedEditPath)
+        arr[state.editingFieldIdx]=obj
+        this.store.mutate(s=>{ s.nestedEditPath=null })
+      } else if (state.editingFieldParent>=0) {
+        this.store.get().schema[state.editingFieldParent].fields[state.editingFieldIdx]=obj
+      } else {
+        this.store.get().schema[state.editingFieldIdx]=obj
+      }
+    } else {
+      if (state.nestedInsertPath) {
+        const arr = getContainerFields(this.store.get().schema,state.nestedInsertPath)
+        arr.splice(state.nestedInsertIdx+1,0,obj)
+        this.store.mutate(s=>{ s.nestedInsertPath=null; s.nestedInsertIdx=-1 })
+      } else if (state.insertAfterIdx>=0) {
+        if (state.insertAfterParent>=0) this.store.get().schema[state.insertAfterParent].fields.splice(state.insertAfterIdx+1,0,obj)
+        else this.store.get().schema.splice(state.insertAfterIdx+1,0,obj)
+        this.store.mutate(s=>{ s.insertAfterIdx=-1 })
+      } else if (state.insertAfterParent>=0) {
+        this.store.get().schema[state.insertAfterParent].fields.push(obj)
+        this.store.mutate(s=>{ s.insertAfterParent=undefined })
+      } else {
+        this.store.get().schema.push(obj)
+      }
+    }
+    this.closeModal(); this.saveSchema()
+  },
+
+  // ── Modals ────────────────────────────────────────────────────────────────
+  showContextModal(insertIdx,parent,nestedPath) {
+    this.store.mutate(s=>{
+      s.editingFieldIdx=-1; s.editingFieldParent=undefined
+      s.insertAfterIdx=insertIdx!==undefined?insertIdx:-1
+      s.insertAfterParent=parent!==undefined?parent:undefined
+      if (nestedPath) { s.nestedInsertPath=nestedPath; s.nestedInsertIdx=insertIdx }
+      s.modalType='context'; s.modalVisible=true
+    })
+  },
+
+  showFieldModal(mode) {
+    this.store.mutate(s=>{ s.modalType='field'; s.modalTitle=mode+' '+s.fieldType.charAt(0).toUpperCase()+s.fieldType.slice(1); s.modalVisible=true })
+  },
+
+  showSectionModal(mode) {
+    this.store.mutate(s=>{ s.modalType='section'; s.modalTitle=mode; s.modalVisible=true })
+  },
+
+  closeModal() {
+    this.store.mutate(s=>{
+      s.modalVisible=false; s.modalType='context'; s.editingSectionIdx=-1
+      s.editingFieldIdx=-1; s.editingFieldParent=undefined
+      s.insertAfterIdx=-1; s.insertAfterParent=undefined
+      s.nestedInsertPath=null; s.nestedInsertIdx=-1; s.nestedEditPath=null
+    })
+  },
+
+  startAddField(type) {
+    this.store.mutate(s=>{
+      s.editingFieldIdx=-1; s.editingFieldParent=undefined
+      s.fieldType=type; s.fieldKey=''
+      s.fieldElAttrs={className:type==='color'?'template-input-color':inputTypes.includes(type)?'template-input-field':''}
+    })
+    this.showFieldModal('Add')
+  },
+
+  startAddSection(layout) {
+    const layoutDef = CONTAINER_LAYOUTS.find(l=>l.id===(layout||'vertical'))
+    this.store.mutate(s=>{
+      s.sectionName=''; s.sectionRepeatable=false
+      s.sectionLayout=layout||'vertical'
+      s.sectionElAttrs={className:layoutDef?.defaultClass||'',style:''}
+    })
+    this.showSectionModal('Add Section')
+  },
+
+  backToContext() {
+    this.store.mutate(s=>{ s.modalType='context' })
+  },
+
+  // ── Versions ──────────────────────────────────────────────────────────────
+  // ── Field helpers ─────────────────────────────────────────────────────────
+  attrAllowed(a) { return (ALLOWED_ATTRS[this.store.get().fieldType]||[]).includes(a) },
+  hasContent() { return VIEW_TYPES.includes(this.store.get().fieldType) },
+  hasConstraints() {
+    const t = this.store.get().fieldType
+    return ['min','max','step','minlength','maxlength','pattern','rows','cols','accept','multiple'].some(a=>(ALLOWED_ATTRS[t]||[]).includes(a))
+  },
+  hasBehavior() {
+    const t = this.store.get().fieldType
+    return ['disabled','readonly','autocomplete'].some(a=>(ALLOWED_ATTRS[t]||[]).includes(a))
+  },
+  hasPresentation() {
+    const t = this.store.get().fieldType
+    return ['className','id'].some(a=>(ALLOWED_ATTRS[t]||[]).includes(a))
+  },
+
+  // ── Field preview helpers ─────────────────────────────────────────────────
+  fieldPreviewText(field) {
+    const c = field.el_attrs||{}
+    return c.placeholder||field.type
+  },
+
+  fieldPropsSummary(field) {
+    const c = field.el_attrs||{}
+    const parts = []
+    if (c.placeholder) parts.push('placeholder="'+c.placeholder+'"')
+    if (c.default) parts.push('default="'+c.default+'"')
+    if (c.required) parts.push('required')
+    if (c.disabled) parts.push('disabled')
+    if (c.readonly) parts.push('readonly')
+    if (c.pattern) parts.push('pattern='+c.pattern)
+    if (c.min!==undefined) parts.push('min='+c.min)
+    if (c.max!==undefined) parts.push('max='+c.max)
+    if (c.options&&c.options.length) parts.push('options['+c.options.length+']')
+    return parts.join(', ')||'—'
+  },
+
+  // ── Flat field paths ──────────────────────────────────────────────────────
+  flatFieldPaths() {
+    const result = []
+    const walk = (items,prefix) => {
+      for (const item of items) {
+        if (item.property==='group') {
+          const p = prefix+item.key
+          const childPrefix = item.repeatable ? p+'[].' : p+'.'
+          walk(item.fields||[],childPrefix)
+          if (!item.fields||item.fields.length===0) result.push({path:p+(item.repeatable?'[]':''),type:'container'})
+        } else if (item.property!=='view_field') {
+          result.push({path:prefix+item.key,type:item.type})
+        }
+      }
+    }
+    walk(this.store.get().schema,'')
+    return result
+  },
+
+  copyPath(path, el) {
+    navigator.clipboard.writeText(path)
+    if (el) {
+      const orig = el.textContent
+      el.textContent = 'Copied!'
+      el.style.color='#16a34a'; el.style.borderColor='#16a34a'
+      setTimeout(() => {
+        el.textContent = orig
+        el.style.color=''; el.style.borderColor=''
+      }, 3000)
+    }
+  },
+
+  async convertImgToBase64() {
+    const url = $('#field-content')?.value
+    if (!url || !url.startsWith('http')) return
+
+    const btn = $('input[name="field-src-type"][value="base64"]')
+    const label = btn?.closest('label')
+    if (label) label.style.opacity = '0.5'
+
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+      $('#field-content').value = dataUrl
+    } catch (err) {
+      alert('Failed to download image: ' + err.message)
+    } finally {
+      if (label) label.style.opacity = '1'
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
+  render() {
+    const s = this.store.get()
+    this.el.innerHTML = `
+      <header class="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          <span class="font-semibold text-sm">Template Builder</span>
+          <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded font-mono">${s.templateName}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium ${s.saveStatus==='saved'?'text-green-500':s.saveStatus==='saving'?'text-amber-500':'text-red-500'}">
+            ${s.saveStatus==='saved'?'Saved':s.saveStatus==='saving'?'Saving...':'Error saving'}
+          </span>
+          <button data-action="save" class="text-xs px-4 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">Save</button>
+        </div>
+      </header>
+
+      <div class="flex-1 flex gap-4 p-4 overflow-hidden">
+        <div class="w-[40%] min-w-0 flex flex-col gap-2 overflow-y-auto" id="builder">
+          ${this.renderSchema(s.schema)}
+
+          <button data-action="add-root" class="w-full py-8 text-sm font-medium bg-white border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all">
+            <span class="flex items-center justify-center gap-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Widget
+            </span>
+          </button>
+        </div>
+
+        <div class="flex-1 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="flex border-b border-gray-200 bg-gray-50">
+            <button data-tab="form" class="px-4 py-2 text-xs font-medium transition-colors ${s.previewTab==='form'?'bg-white text-blue-600 border-b-2 border-blue-500':'text-gray-500 hover:text-gray-700'}">Form Preview</button>
+            <button data-tab="props" class="px-4 py-2 text-xs font-medium transition-colors ${s.previewTab==='props'?'bg-white text-blue-600 border-b-2 border-blue-500':'text-gray-500 hover:text-gray-700'}">Form Read Property</button>
+            <button data-tab="schema-normalized" class="px-4 py-2 text-xs font-medium transition-colors ${s.previewTab==='schema-normalized'?'bg-white text-blue-600 border-b-2 border-blue-500':'text-gray-500 hover:text-gray-700'}">Schema (Normalized)</button>
+            <button data-tab="schema-internal" class="px-4 py-2 text-xs font-medium transition-colors ${s.previewTab==='schema-internal'?'bg-white text-blue-600 border-b-2 border-blue-500':'text-gray-500 hover:text-gray-700'}">Schema (Internal)</button>
+          </div>
+
+          ${s.previewTab==='form' ? `<div data-form-root>${renderFormPreview(s.schema, s.repeatInstances, { editable: true })}</div>` : ''}
+          ${s.previewTab==='props' ? this.renderFieldProps() : ''}
+          ${s.previewTab==='schema-normalized' ? this.renderNormalizedSchemaJSON() : ''}
+          ${s.previewTab==='schema-internal' ? this.renderSchemaJSON() : ''}
+        </div>
+      </div>
+
+      ${this.renderModal(s)}
+    `
+    this.bindEvents()
+    const formRoot = $('[data-form-root]')
+    if (formRoot) {
+      const s = this.store.get()
+      initFormPersistence(formRoot, s.schema, s.repeatInstances, (counts) => {
+        this.store.mutate(s => {
+          for (const id of Object.keys(counts)) {
+            s.repeatInstances[id] = counts[id]
+          }
+        })
+      })
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  SCHEMA RENDERER
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  renderSchema(schema, level=0) {
+    return schema.map((item,idx)=>this.renderContainer(item,idx,schema,[])).join('')
+  },
+
+  renderContainer(item,idx,parentArr,path) {
+    const s = this.store.get()
+    const isRoot = parentArr===s.schema
+    const fullPath = isRoot ? [idx] : [...path,idx]
+
+    if (item.property!=='group') {
+      return this.renderFieldCard(item,idx,parentArr,isRoot?-1:fullPath[fullPath.length-2],fullPath)
+    }
+
+    return `
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-gray-400 flex-shrink-0" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span class="text-sm font-medium text-gray-800 flex-1 truncate">${item.key}</span>
+          ${item.layout&&item.layout!=='vertical'?`<span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded font-mono hidden sm:inline">${item.layout}</span>`:''}
+          <div class="flex items-center gap-0.5">
+            ${isRoot ? `
+              <button data-move="${idx},up" class="btn" ${idx===0?'disabled':''} title="Move up">▲</button>
+              <button data-move="${idx},down" class="btn" ${idx===parentArr.length-1?'disabled':''} title="Move down">▼</button>
+              <button data-add-field='${JSON.stringify({path, idx:idx-1})}' class="btn text-green-600 hover:text-green-700" title="Add above">+▲</button>
+              <button data-add-field='${JSON.stringify({path, idx:idx})}' class="btn text-green-600 hover:text-green-700" title="Add below">+▼</button>
+              <button data-edit-section="${idx}" class="btn-action">Edit</button>
+              <button data-remove-section="${idx}" class="btn-danger">Delete</button>
+            ` : `
+              <button data-add-field='${JSON.stringify({path, idx:idx-1})}' class="btn text-green-600 hover:text-green-700" title="Add above">+▲</button>
+              <button data-add-field='${JSON.stringify({path, idx:idx})}' class="btn text-green-600 hover:text-green-700" title="Add below">+▼</button>
+              <button data-edit-container='${JSON.stringify(fullPath)}' class="btn-action">Edit</button>
+              <button data-remove-path='${JSON.stringify(fullPath)}' class="btn-danger">Delete</button>
+            `}
+          </div>
+        </div>
+
+        ${item.repeatable ? `
+          <div class="px-3 py-1 bg-amber-50 border-b border-amber-100 flex items-center gap-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-amber-500" stroke-linecap="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 01-4 4H3"/></svg>
+            <span class="text-[10px] text-amber-600 font-medium">Repeatable</span>
+          </div>
+        ` : ''}
+
+        <div class="px-3 py-2">
+          ${(item.fields||[]).map((field,fIdx)=>{
+            const fPath = [...fullPath,fIdx]
+            return `
+              ${field.property==='group' ? this.renderContainer(field,fIdx,item.fields,fullPath) : this.renderFieldCard(field,fIdx,item.fields,fullPath[0],fPath)}
+              <div class="h-4 relative -my-2 z-10 flex items-center justify-center">
+                <div class="absolute inset-x-2 h-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center group">
+                  <div class="w-full h-px bg-gray-200 group-hover:bg-blue-200"></div>
+                  <div class="absolute flex gap-1">
+                    <button data-add-field='${JSON.stringify({path:fullPath,idx:fIdx})}' class="text-[10px] px-2 py-0.5 bg-white border border-gray-200 rounded text-gray-400 hover:text-blue-600 hover:border-blue-300 transition-colors whitespace-nowrap">+ Add Below</button>
+                    ${s.clipboard ? `<button data-paste-path='${JSON.stringify({path:fullPath,idx:fIdx})}' class="text-[10px] px-2 py-0.5 bg-white border border-dashed border-orange-300 rounded text-orange-500 hover:text-orange-600 hover:border-orange-400 transition-colors whitespace-nowrap">Paste Below</button>` : ''}
+                  </div>
+                </div>
+              </div>
+            `
+          }).join('')}
+
+          <div class="flex gap-1 mt-2">
+            <button data-add-field='${JSON.stringify({path:fullPath,idx:(item.fields||[]).length-1})}' class="flex-1 py-2 text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-500 transition-colors">+ Add Widget</button>
+            ${s.clipboard ? `<button data-paste-path='${JSON.stringify({path:fullPath,idx:(item.fields||[]).length-1})}' class="py-2 px-3 text-xs border border-dashed border-orange-300 rounded-lg text-orange-500 hover:text-orange-600 hover:border-orange-400 transition-colors whitespace-nowrap">Paste</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  renderFieldCard(field,idx,parentArr,sectionIdx,path) {
+    const s = this.store.get()
+    const rootField = sectionIdx===-1
+    return `
+      <div class="bg-white rounded-lg border border-gray-200 p-3">
+        <div class="flex items-center gap-1.5 mb-1.5">
+          <span class="w-5 h-5 flex items-center justify-center text-gray-400 flex-shrink-0">${SVG_MAP[field.type]||''}</span>
+          <span class="text-xs font-medium text-gray-800 truncate flex-1">${field.key||'unnamed'}</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded uppercase font-mono">${field.type}</span>
+          ${field.el_attrs?.required?'<span class="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-500 rounded font-medium">required</span>':''}
+          ${field.el_attrs?.disabled?'<span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded font-medium">disabled</span>':''}
+          ${field.el_attrs?.readonly?'<span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded font-medium">readonly</span>':''}
+          ${field.el_attrs?.pattern?'<span class="text-[10px] px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded font-mono">pattern</span>':''}
+        </div>
+        <div class="mt-2">
+          ${['text','email','url','tel','number'].includes(field.type)
+            ? `<div class="w-full h-7 bg-gray-50 border border-gray-200 rounded-md px-2 flex items-center text-xs text-gray-400">${field.el_attrs?.placeholder||field.type}</div>`
+            : field.type==='textarea'
+            ? `<div class="w-full h-14 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-400 line-clamp-3">${field.el_attrs?.placeholder||'Textarea'}</div>`
+            : field.type==='select'
+            ? `<div class="w-full h-7 bg-gray-50 border border-gray-200 rounded-md px-2 flex items-center justify-between text-xs text-gray-400"><span>${field.el_attrs?.placeholder||'Select...'}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-gray-400"><polyline points="6 9 12 15 18 9"/></svg></div>`
+            : field.type==='date'
+            ? `<div class="w-full h-7 bg-gray-50 border border-gray-200 rounded-md px-2 flex items-center text-xs text-gray-400"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 mr-1.5 text-gray-400"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Pick a date</span></div>`
+            : field.type==='color'
+            ? `<div class="flex items-center gap-2"><span class="w-6 h-6 rounded border border-gray-200 bg-gray-100"></span><span class="text-xs text-gray-400">Pick a color</span></div>`
+            : field.type==='file'||field.type==='image'
+            ? `<div class="w-full h-14 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center text-xs text-gray-400"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 mr-1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload file</div>`
+            : field.type==='label'
+            ? `<div class="text-sm font-medium text-gray-700">${field.el_attrs?.content||'Label'}</div>`
+            : field.type==='paragraph'
+            ? `<div class="text-xs text-gray-500 line-clamp-2">${field.el_attrs?.content||'Paragraph text...'}</div>`
+            : field.type==='img'
+            ? `<div class="w-full h-16 bg-gray-50 rounded-md flex items-center justify-center text-xs text-gray-400"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 mr-1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Image</div>`
+            : ''
+          }
+        </div>
+        <div class="flex items-center flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+          ${path ? `
+            <button data-move-path='${JSON.stringify({path:path.join(','),dir:'up'})}' class="btn" ${idx===0?'disabled':''} title="Move up">▲</button>
+            <button data-move-path='${JSON.stringify({path:path.join(','),dir:'down'})}' class="btn" ${idx===(parentArr?.length||0)-1?'disabled':''} title="Move down">▼</button>
+            <button data-add-field='${JSON.stringify({path:path.slice(0,-1), idx:idx-1})}' class="btn text-green-600 hover:text-green-700" title="Add above">+▲</button>
+            <button data-add-field='${JSON.stringify({path:path.slice(0,-1), idx:idx})}' class="btn text-green-600 hover:text-green-700" title="Add below">+▼</button>
+            <button data-copy-path='${JSON.stringify(path)}' class="btn" title="Copy">Copy</button>
+            <button data-cut-path='${JSON.stringify(path)}' class="btn" title="Cut">Cut</button>
+            <button data-dup-path='${JSON.stringify(path)}' class="btn" title="Duplicate">Dup</button>
+            ${s.clipboard ? `<button data-paste-above-path='${JSON.stringify(path)}' class="btn-paste" title="Paste above">Paste ▲</button>` : ''}
+            ${s.clipboard ? `<button data-paste-below-path='${JSON.stringify(path)}' class="btn-paste" title="Paste below">Paste ▼</button>` : ''}
+            <span class="flex-1"></span>
+            <button data-edit-field-path='${JSON.stringify(path)}' class="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors">Edit</button>
+            <button data-remove-path='${JSON.stringify(path)}' class="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded hover:bg-red-50 hover:text-red-600 transition-colors">Delete</button>
+          ` : `
+            <button data-move="${idx},${rootField?'':sectionIdx},up" class="btn" ${idx===0?'disabled':''} title="Move up">▲</button>
+            <button data-move="${idx},${rootField?'':sectionIdx},down" class="btn" ${idx===(parentArr?.length||0)-1?'disabled':''} title="Move down">▼</button>
+            <button data-add-field='${JSON.stringify({path:rootField?[]:[sectionIdx], idx:idx-1})}' class="btn text-green-600 hover:text-green-700" title="Add above">+▲</button>
+            <button data-add-field='${JSON.stringify({path:rootField?[]:[sectionIdx], idx:idx})}' class="btn text-green-600 hover:text-green-700" title="Add below">+▼</button>
+            <button data-copy="${idx},${rootField?'':sectionIdx}" class="btn" title="Copy">Copy</button>
+            <button data-cut="${idx},${rootField?'':sectionIdx}" class="btn" title="Cut">Cut</button>
+            <button data-dup="${idx},${rootField?'':sectionIdx}" class="btn" title="Duplicate">Dup</button>
+            ${s.clipboard ? `<button data-paste-above="${idx},${rootField?'':sectionIdx}" class="btn-paste" title="Paste above">Paste ▲</button>` : ''}
+            ${s.clipboard ? `<button data-paste-below="${idx},${rootField?'':sectionIdx}" class="btn-paste" title="Paste below">Paste ▼</button>` : ''}
+            <span class="flex-1"></span>
+            <button data-edit-field="${idx},${rootField?'':sectionIdx}" class="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors">Edit</button>
+            <button data-remove-field="${idx},${rootField?'':sectionIdx}" class="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded hover:bg-red-50 hover:text-red-600 transition-colors">Delete</button>
+          `}
+        </div>
+      </div>
+    `
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  FIELD PROPS TABLE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  renderFieldProps() {
+    const paths = this.flatFieldPaths()
+    return `
+      <div class="flex-1 p-4 overflow-auto">
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="text-left px-3 py-2 font-semibold text-gray-600 w-1">#</th>
+                <th class="text-left px-3 py-2 font-semibold text-gray-600">Field Path</th>
+                <th class="text-left px-3 py-2 font-semibold text-gray-600 w-20">Type</th>
+                <th class="text-right px-3 py-2 font-semibold text-gray-600 w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paths.map((f,i)=>`
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="px-3 py-2 text-gray-400 font-mono">${i+1}</td>
+                  <td class="px-3 py-2 font-mono text-gray-800">${f.path}</td>
+                  <td class="px-3 py-2"><span class="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-500 rounded uppercase font-mono">${f.type}</span></td>
+                  <td class="px-3 py-2 text-right"><button data-copy-path="${f.path}" class="text-[10px] px-2 py-1 bg-white border border-gray-200 rounded text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors">Copy</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `
+  },
+
+  renderNormalizedSchemaJSON() {
+    const normalized = buildOutputObj(this.store.get().schema)
+    return `<div class="flex-1 p-4 overflow-auto"><pre class="text-xs font-mono whitespace-pre-wrap text-gray-700"><code>${JSON.stringify(normalized,null,2)}</code></pre></div>`
+  },
+
+  renderSchemaJSON() {
+    return `<div class="flex-1 p-4 overflow-auto"><pre class="text-xs font-mono whitespace-pre-wrap text-gray-700"><code>${JSON.stringify(this.store.get().schema,null,2)}</code></pre></div>`
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  MODAL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  renderModal(state) {
+    if (!state.modalVisible) return ''
+
+    const isContext = state.modalType==='context'
+    const isField = state.modalType==='field'
+    const isSection = state.modalType==='section'
+
+    return `
+      <div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" data-action="modal-overlay">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 max-h-[85vh] overflow-y-auto">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <div class="flex items-center gap-2">
+              ${(isField||isSection)?`<button data-action="back-context" class="text-gray-400 hover:text-gray-600 transition-colors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>`:''}
+              <h2 class="text-sm font-semibold text-gray-800">${isContext?'Add Widget':isField?(state.modalTitle||'Field'):(state.modalTitle||'Section')}</h2>
+            </div>
+            <button data-action="close-modal" class="text-gray-400 hover:text-gray-600">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="p-4 space-y-4">
+            ${isContext ? this.renderContextModal() : ''}
+            ${isSection ? this.renderSectionModal(state) : ''}
+            ${isField ? this.renderFieldModal(state) : ''}
+          </div>
+
+          ${(isField||isSection)?`
+            <div class="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+              <button data-action="close-modal" class="text-xs px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+              <button data-action="confirm-modal" class="text-xs px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">Apply</button>
+            </div>
+          `:''}
+        </div>
+      </div>
+    `
+  },
+
+  renderContextModal() {
+    return `
+      <div>
+        <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Input Fields</div>
+        <div class="grid grid-cols-4 gap-2">
+          ${INPUT_TYPES.map(t=>`
+            <button data-add-type="${t}" class="flex flex-col items-center gap-1.5 p-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center">
+              <span class="w-8 h-8 flex items-center justify-center text-gray-600">${SVG_MAP[t]}</span>
+              <span class="text-xs font-medium text-gray-700 capitalize">${t}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">View Fields</div>
+        <div class="grid grid-cols-4 gap-2">
+          ${VIEW_TYPES.map(t=>`
+            <button data-add-type="${t}" class="flex flex-col items-center gap-1.5 p-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center">
+              <span class="w-8 h-8 flex items-center justify-center text-gray-600">${SVG_MAP[t]}</span>
+              <span class="text-xs font-medium text-gray-700 capitalize">${t}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Containers</div>
+        <div class="grid grid-cols-4 gap-2">
+          ${CONTAINER_LAYOUTS.map(l=>`
+            <button data-add-container="${l.id}" class="flex flex-col items-center gap-1.5 p-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center">
+              <span class="w-8 h-8 flex items-center justify-center text-gray-600">${l.icon}</span>
+              <span class="text-xs font-medium text-gray-700">${l.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `
+  },
+
+  renderSectionModal(state) {
+    return `
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Key <span class="text-red-400">*</span></label>
+        <input id="section-key" value="${state.sectionName}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400" placeholder="e.g. contact_info">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-2">Layout</label>
+        <div class="flex gap-2">
+          ${CONTAINER_LAYOUTS.map(l=>`
+            <button data-layout="${l.id}" class="flex flex-col items-center gap-1 p-2.5 border rounded-lg transition-all flex-1 ${state.sectionLayout===l.id?'border-blue-400 bg-blue-50 text-blue-600':'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}">
+              <span class="w-6 h-6 flex items-center justify-center">${l.icon}</span>
+              <span class="text-[10px] font-medium">${l.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="section-repeatable" type="checkbox" class="accent-amber-500 rounded" ${state.sectionRepeatable?'checked':''}>
+        <label class="text-xs font-medium text-gray-600">Repeatable <span class="text-gray-400 font-normal">(users can add multiple entries like work experience)</span></label>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">CSS Class</label>
+          <input id="section-classname" value="${state.sectionElAttrs.className}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. form-section">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Inline Style</label>
+          <input id="section-style" value="${state.sectionElAttrs.style}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. background: #f9f9f9">
+        </div>
+      </div>
+    `
+  },
+
+  renderFieldModal(state) {
+    const ft = state.fieldType
+    const backBtn = `<button data-action="back-context" class="text-gray-400 hover:text-gray-600 transition-colors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>`
+
+    return `
+      <div class="flex gap-3">
+        <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden text-gray-600">${SVG_MAP[ft]||''}</div>
+        <div class="flex-1 space-y-3">
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+              <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Basic</span>
+            </div>
+            <div class="p-3 space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Key <span class="text-red-400">*</span></label>
+                <input id="field-key" value="${state.fieldKey}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400" placeholder="e.g. full_name">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                <select id="field-type" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
+                  ${TYPES.map(t=>`<option value="${t}" ${t===ft?'selected':''}>${t}</option>`).join('')}
+                </select>
+              </div>
+              ${this.attrAllowed('placeholder')?`
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Placeholder</label>
+                  <input id="field-placeholder" value="${state.fieldElAttrs.placeholder||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. Enter your first name">
+                </div>
+              `:''}
+              ${this.attrAllowed('default')?`
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Default value</label>
+                  <input id="field-default" value="${state.fieldElAttrs.default||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+                </div>
+              `:''}
+              ${this.attrAllowed('required')?`
+                <div class="flex items-center gap-2">
+                  <input id="field-required" type="checkbox" class="accent-blue-500 rounded" ${state.fieldElAttrs.required?'checked':''}>
+                  <label class="text-xs font-medium text-gray-600">Required</label>
+                </div>
+              `:''}
+            </div>
+          </div>
+
+          ${this.hasContent()?`
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Content</span>
+              </div>
+              <div class="p-3 space-y-3">
+                ${ft==='label'?`
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Label Text</label>
+                    <input id="field-content" value="${state.fieldElAttrs.content||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. Full Name">
+                  </div>
+                `:ft==='paragraph'?`
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Paragraph Text</label>
+                    <textarea id="field-content" rows="3" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none" placeholder="Enter paragraph text...">${state.fieldElAttrs.content||''}</textarea>
+                  </div>
+                `:ft==='img'?`
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">src</label>
+                    <input id="field-content" value="${state.fieldElAttrs.content||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="https://example.com/image.jpg or data:image/...">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Alt Text</label>
+                    <input id="field-alt" value="${state.fieldElAttrs.alt||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="Image description">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Image Source Mode</label>
+                    <div class="flex flex-col gap-1.5">
+                      <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors ${(state.fieldElAttrs.content||'').startsWith('data:')?'':'border-blue-400 bg-blue-50'}">
+                        <input type="radio" name="field-src-type" value="url" data-action="img-src-mode" class="accent-blue-500" ${(state.fieldElAttrs.content||'').startsWith('data:')?'':'checked'}>
+                        <div class="flex flex-col">
+                          <span class="text-xs font-medium text-gray-700">URL (direct)</span>
+                          <span class="text-[10px] text-gray-400">Use the image URL as-is — loads from external source at render time</span>
+                        </div>
+                      </label>
+                      <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors ${(state.fieldElAttrs.content||'').startsWith('data:')?'border-blue-400 bg-blue-50':''}">
+                        <input type="radio" name="field-src-type" value="base64" data-action="img-src-mode" class="accent-blue-500" ${(state.fieldElAttrs.content||'').startsWith('data:')?'checked':''}>
+                        <div class="flex flex-col">
+                          <span class="text-xs font-medium text-gray-700">Base64 (inline)</span>
+                          <span class="text-[10px] text-gray-400">Download and encode as base64 data URI — fully self-contained, no external dependency</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                `:''}
+              </div>
+            </div>
+          `:''}
+
+          ${this.hasConstraints()?`
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Constraints</span>
+              </div>
+              <div class="p-3 space-y-3">
+                ${['min','max'].some(a=>this.attrAllowed(a))?`
+                  <div class="flex gap-2">
+                    ${this.attrAllowed('min')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Min</label><input id="field-min" value="${state.fieldElAttrs.min||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"></div>`:''}
+                    ${this.attrAllowed('max')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Max</label><input id="field-max" value="${state.fieldElAttrs.max||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"></div>`:''}
+                  </div>
+                `:''}
+                ${this.attrAllowed('step')?`<div><label class="block text-xs font-medium text-gray-600 mb-1">Step</label><input id="field-step" value="${state.fieldElAttrs.step||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. 1"></div>`:''}
+                ${['minlength','maxlength'].some(a=>this.attrAllowed(a))?`
+                  <div class="flex gap-2">
+                    ${this.attrAllowed('minlength')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Min Length</label><input id="field-minlength" value="${state.fieldElAttrs.minlength||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"></div>`:''}
+                    ${this.attrAllowed('maxlength')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Max Length</label><input id="field-maxlength" value="${state.fieldElAttrs.maxlength||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"></div>`:''}
+                  </div>
+                `:''}
+                ${this.attrAllowed('pattern')?`<div><label class="block text-xs font-medium text-gray-600 mb-1">Pattern (regex)</label><input id="field-pattern" value="${state.fieldElAttrs.pattern||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. ^[a-zA-Z]+$"></div>`:''}
+                ${['rows','cols'].some(a=>this.attrAllowed(a))?`
+                  <div class="flex gap-2">
+                    ${this.attrAllowed('rows')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Rows</label><input id="field-rows" value="${state.fieldElAttrs.rows||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. 5"></div>`:''}
+                    ${this.attrAllowed('cols')?`<div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Cols</label><input id="field-cols" value="${state.fieldElAttrs.cols||''}" type="number" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. 30"></div>`:''}
+                  </div>
+                `:''}
+                ${this.attrAllowed('accept')?`<div><label class="block text-xs font-medium text-gray-600 mb-1">Accepted file types</label><input id="field-accept" value="${state.fieldElAttrs.accept||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. .pdf,.doc,.docx"></div>`:''}
+                ${this.attrAllowed('multiple')?`<div class="flex items-center gap-2"><input id="field-multiple" type="checkbox" class="accent-blue-500 rounded" ${state.fieldElAttrs.multiple?'checked':''}><label class="text-xs font-medium text-gray-600">Allow multiple</label></div>`:''}
+              </div>
+            </div>
+          `:''}
+
+          ${this.attrAllowed('options')?`
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Options</span>
+              </div>
+              <div class="p-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Options (JSON array)</label>
+                <textarea id="field-options" rows="5" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono resize-none" placeholder='["Option 1","Option 2"]'>${state.fieldElAttrs.optionsText||''}</textarea>
+              </div>
+            </div>
+          `:''}
+
+          ${this.hasBehavior()?`
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Behavior</span>
+              </div>
+              <div class="p-3 space-y-3">
+                ${this.attrAllowed('disabled')?`<div class="flex items-center gap-2"><input id="field-disabled" type="checkbox" class="accent-blue-500 rounded" ${state.fieldElAttrs.disabled?'checked':''}><label class="text-xs font-medium text-gray-600">Disabled</label></div>`:''}
+                ${this.attrAllowed('readonly')?`<div class="flex items-center gap-2"><input id="field-readonly" type="checkbox" class="accent-blue-500 rounded" ${state.fieldElAttrs.readonly?'checked':''}><label class="text-xs font-medium text-gray-600">Read-only</label></div>`:''}
+                ${this.attrAllowed('autocomplete')?`
+                  <div class="flex items-center gap-2">
+                    <label class="text-xs font-medium text-gray-600">Autocomplete</label>
+                    <select id="field-autocomplete" class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400">
+                      <option value="">Default</option>
+                      <option value="off" ${state.fieldElAttrs.autocomplete==='off'?'selected':''}>Off</option>
+                      <option value="on" ${state.fieldElAttrs.autocomplete==='on'?'selected':''}>On</option>
+                      <option value="name" ${state.fieldElAttrs.autocomplete==='name'?'selected':''}>Name</option>
+                      <option value="email" ${state.fieldElAttrs.autocomplete==='email'?'selected':''}>Email</option>
+                      <option value="tel" ${state.fieldElAttrs.autocomplete==='tel'?'selected':''}>Telephone</option>
+                    </select>
+                  </div>
+                `:''}
+              </div>
+            </div>
+          `:''}
+
+          ${this.hasPresentation()?`
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-1 cursor-pointer">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Presentation</span>
+              </div>
+              <div class="p-3 space-y-3">
+                <div><label class="block text-xs font-medium text-gray-600 mb-1">CSS Class</label><input id="field-classname" value="${state.fieldElAttrs.className||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. my-input"></div>
+                <div><label class="block text-xs font-medium text-gray-600 mb-1">ID</label><input id="field-id" value="${state.fieldElAttrs.id||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. my-input"></div>
+                <div><label class="block text-xs font-medium text-gray-600 mb-1">Inline Style</label><input id="field-style" value="${state.fieldElAttrs.style||''}" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 font-mono" placeholder="e.g. width:100%"></div>
+              </div>
+            </div>
+          `:''}
+        </div>
+      </div>
+    `
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  EVENT HANDLING
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  bindEvents() {
+    if (this._handler) this.el.removeEventListener('click', this._handler)
+    this._handler = e => {
+      const t = e.target.closest('[data-action],[data-tab],[data-move],[data-copy],[data-cut],[data-dup],[data-paste-above],[data-paste-below],[data-edit-field],[data-remove-field],[data-remove-section],[data-edit-section],[data-add-field],[data-add-type],[data-add-container],[data-layout],[data-copy-path],[data-remove-path],[data-move-path],[data-copy-path-btn],[data-cut-path],[data-dup-path],[data-paste-above-path],[data-paste-below-path],[data-edit-field-path],[data-paste-path],[data-edit-container]')
+      if (!t) return
+      e.stopPropagation()
+
+      const action = t.getAttribute('data-action')
+
+      // Global actions
+      if (action==='save') return this.saveSchema()
+      if (action==='add-root') return this.showContextModal(undefined,undefined)
+      if (action==='close-modal') return this.closeModal()
+      if (action==='modal-overlay') { if (e.target !== t) return; return this.closeModal() }
+      if (action==='back-context') return this.backToContext()
+      if (action==='confirm-modal') {
+        const s = this.store.get()
+        if (s.modalType==='section') {
+          const keyInput = $('#section-key')
+          const repeatCheck = $('#section-repeatable')
+          const classNameInput = $('#section-classname')
+          const styleInput = $('#section-style')
+          // Read layout from data attribute
+          const layoutBtn = $('[data-layout].border-blue-400')
+          const layout = layoutBtn ? layoutBtn.getAttribute('data-layout') : this.store.get().sectionLayout
+          this.store.mutate(s=>{
+            s.sectionName=keyInput?keyInput.value:''
+            s.sectionRepeatable=repeatCheck?repeatCheck.checked:false
+            s.sectionLayout=layout
+            s.sectionElAttrs.className=classNameInput?classNameInput.value:''
+            s.sectionElAttrs.style=styleInput?styleInput.value:''
+          })
+          this.confirmSection()
+        } else if (s.modalType==='field') {
+          const keyInput = $('#field-key')
+          const typeSelect = $('#field-type')
+          const collectFields = {}
+          const fieldMappings = {
+            'field-placeholder':'placeholder','field-default':'default','field-min':'min','field-max':'max',
+            'field-step':'step','field-minlength':'minlength','field-maxlength':'maxlength','field-pattern':'pattern',
+            'field-rows':'rows','field-cols':'cols','field-accept':'accept','field-content':'content','field-alt':'alt',
+            'field-options':'optionsText','field-classname':'className','field-id':'id',
+            'field-style':'style','field-autocomplete':'autocomplete'
+          }
+          for (const [id,key] of Object.entries(fieldMappings)) {
+            const el = $('#'+id)
+            if (el) collectFields[key] = el.type==='checkbox'?el.checked:el.value
+          }
+          this.store.mutate(s=>{
+            s.fieldKey=keyInput?keyInput.value:''
+            if(typeSelect) s.fieldType=typeSelect.value
+            const attrs = {...s.fieldElAttrs}
+            for (const [k,v] of Object.entries(collectFields)) attrs[k]=v
+            s.fieldElAttrs=attrs
+          })
+          this.confirmField()
+        }
+        return
+      }
+
+      // Tab switching
+      const tab = t.getAttribute('data-tab')
+      if (tab) return this.setTab(tab)
+
+      // Move
+      const move = t.getAttribute('data-move')
+      if (move) {
+        const parts = move.split(',')
+        const idx = parseInt(parts[0])
+        const parent = parts[1]!==''&&parts[1]!=='undefined'?parseInt(parts[1]):undefined
+        const dir = parts[2]||parts[1]
+        if (dir==='up'||dir==='down'||dir==='top'||dir==='bottom') {
+          if (dir==='up') this.moveUp(idx,parent)
+          else if (dir==='down') this.moveDown(idx,parent)
+          else if (dir==='top') this.moveToTop(idx,parent)
+          else if (dir==='bottom') this.moveToBottom(idx,parent)
+        } else {
+          if (parent==='up') this.moveUp(idx)
+          else if (parent==='down') this.moveDown(idx)
+          else if (parent==='top') this.moveToTop(idx)
+          else if (parent==='bottom') this.moveToBottom(idx)
+        }
+        return
+      }
+
+      // Copy/cut/dup/paste (root level)
+      const copy = t.getAttribute('data-copy')
+      if (copy) { const [i,p]=copy.split(','); return this.copyItem(parseInt(i),p?parseInt(p):undefined) }
+      const cut = t.getAttribute('data-cut')
+      if (cut) { const [i,p]=cut.split(','); return this.cutItem(parseInt(i),p?parseInt(p):undefined) }
+      const dup = t.getAttribute('data-dup')
+      if (dup) { const [i,p]=dup.split(','); return this.duplicateItem(parseInt(i),p?parseInt(p):undefined) }
+      const pa = t.getAttribute('data-paste-above')
+      if (pa) { const [i,p]=pa.split(','); return this.pasteAbove(parseInt(i),p?parseInt(p):undefined) }
+      const pb = t.getAttribute('data-paste-below')
+      if (pb) { const [i,p]=pb.split(','); return this.pasteBelow(parseInt(i),p?parseInt(p):undefined) }
+
+      // Edit/remove field
+      const ef = t.getAttribute('data-edit-field')
+      if (ef) { const [i,p]=ef.split(','); return this.editField(parseInt(i),p?parseInt(p):undefined) }
+      const rf = t.getAttribute('data-remove-field')
+      if (rf) { const [i,p]=rf.split(','); return this.removeField(parseInt(i),p?parseInt(p):undefined) }
+
+      // Section operations
+      const es = t.getAttribute('data-edit-section')
+      if (es) return this.editSection(parseInt(es))
+      const rs = t.getAttribute('data-remove-section')
+      if (rs) return this.removeSection(parseInt(rs))
+
+      // ── Path-based operations ──────────────────────────────────────────
+      const rp = t.getAttribute('data-remove-path')
+      if (rp) return this.removeItemByPath(JSON.parse(rp))
+
+      const mp = t.getAttribute('data-move-path')
+      if (mp) { const d=JSON.parse(mp); return this.moveItemByPath(d.path.split(',').map(Number),d.dir) }
+
+      const cp = t.getAttribute('data-copy-path')
+      if (cp) { try { return this.copyItemByPath(JSON.parse(cp)) } catch {} }
+
+      const ctp = t.getAttribute('data-cut-path')
+      if (ctp) return this.cutItemByPath(JSON.parse(ctp))
+
+      const dp = t.getAttribute('data-dup-path')
+      if (dp) return this.duplicateItemByPath(JSON.parse(dp))
+
+      const pap = t.getAttribute('data-paste-above-path')
+      if (pap) return this.pasteAboveByPath(JSON.parse(pap))
+
+      const pbp = t.getAttribute('data-paste-below-path')
+      if (pbp) return this.pasteBelowByPath(JSON.parse(pbp))
+
+      const efp = t.getAttribute('data-edit-field-path')
+      if (efp) return this.editFieldByPath(JSON.parse(efp))
+
+      const ec = t.getAttribute('data-edit-container')
+      if (ec) return this.editContainerByPath(JSON.parse(ec))
+
+      // ── Add field - context modal ──────────────────────────────────────
+      const af = t.getAttribute('data-add-field')
+      if (af) {
+        const d = JSON.parse(af)
+        this.showContextModal(d.idx, undefined, d.path)
+        return
+      }
+
+      const pp = t.getAttribute('data-paste-path')
+      if (pp) {
+        const d = JSON.parse(pp)
+        this.pasteBelowByPath(d.path, d.idx)
+        return
+      }
+
+      // ── Context modal: add type/container ──────────────────────────────
+      const at = t.getAttribute('data-add-type')
+      if (at) return this.startAddField(at)
+
+      const ac = t.getAttribute('data-add-container')
+      if (ac) {
+        this.startAddSection(ac)
+        // The section modal needs to be set up; confirm callback triggered by modal confirm
+        return
+      }
+
+      // ── Layout selection ───────────────────────────────────────────────
+      const layout = t.getAttribute('data-layout')
+      if (layout) {
+        const layoutDef = CONTAINER_LAYOUTS.find(l=>l.id===layout)
+        this.store.mutate(s=>{
+          s.sectionLayout=layout
+          const old = s.sectionElAttrs.className||''
+          s.sectionElAttrs.className = old.replace(/template-container-\w+/g,'').trim() + ' ' + (layoutDef?.defaultClass||'')
+        })
+        this.render()
+        const keyInput = $('#section-key')
+        if (keyInput) keyInput.focus()
+        return
+      }
+
+      // ── Copy path ──────────────────────────────────────────────────────
+      const cpp = t.getAttribute('data-copy-path')
+      if (cpp) return this.copyPath(cpp, t)
+
+      // ── Image source mode ──────────────────────────────────────────────
+      if (t.getAttribute('data-action') === 'img-src-mode' && t.value === 'base64') {
+        this.convertImgToBase64()
+        return
+      }
+
+      // ── Repeatable instances ───────────────────────────────────────────
+      if (action === 'add-repeat') {
+        e.stopImmediatePropagation()
+        const id = t.getAttribute('data-id')
+        setTimeout(() => {
+          this.store.mutate(s=>{
+            s.repeatInstances[id] = (s.repeatInstances[id]||0) + 1
+          })
+        }, 0)
+        return
+      }
+      if (action === 'remove-repeat') {
+        e.stopImmediatePropagation()
+        const id = t.getAttribute('data-id')
+        setTimeout(() => {
+          this.store.mutate(s=>{
+            const c = s.repeatInstances[id]||0
+            if (c > 0) s.repeatInstances[id] = c - 1
+          })
+        }, 0)
+        return
+      }
+    }
+    this.el.addEventListener('click', this._handler)
+  }
+}
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => app.init())
+</script>
+</body>
+</html>

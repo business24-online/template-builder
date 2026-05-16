@@ -1,0 +1,13 @@
+{
+  "template_title": {
+    "property": "input_field",
+    "type": "text",
+    "placeholder": "Enter template title",
+    "className": "template-input-field"
+  },
+  "template_description": {
+    "property": "input_field",
+    "type": "textarea",
+    "className": "template-input-field"
+  }
+}

@@ -1,0 +1,165 @@
+/* ─── Container Layouts ─────────────────────────────────────────── */
+
+.template-container-normal {
+  margin: 16px 0;
+}
+
+.template-container-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.template-container-horizontal {
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.template-container-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.template-container-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .template-container-horizontal {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .template-container-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .template-container-flex {
+    flex-direction: column;
+  }
+}
+
+/* ─── Input Fields ──────────────────────────────────────────────── */
+
+.template-input-field {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.template-input-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.template-input-field:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.template-input-field::placeholder {
+  color: #aaa;
+}
+
+textarea.template-input-field {
+  min-height: 80px;
+  resize: vertical;
+}
+
+select.template-input-field {
+  cursor: pointer;
+  appearance: auto;
+}
+
+/* color */
+.template-input-color {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.template-input-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.template-input-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+/* ─── File & Image Upload ────────────────────────────────────────── */
+
+.template-input-file {
+  width: 100%;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.template-input-file::file-selector-button {
+  padding: 6px 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.template-input-file::file-selector-button:hover {
+  background: #e5e5e5;
+  border-color: #3b82f6;
+}
+
+.template-file-preview {
+  max-width: 200px;
+  max-height: 150px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-top: 4px;
+}
+
+.template-file-name {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .template-input-field {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  select.template-input-field {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ template_title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            color: #111827;
+        }
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        nav .logo {
+            font-weight: 700;
+            font-size: 1.125rem;
+        }
+        nav .logo span { color: #6366f1; }
+        nav .links { display: flex; gap: 1.5rem; }
+        nav .links a {
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.875rem;
+            transition: color 0.15s;
+        }
+        nav .links a:hover { color: #111827; }
+        nav .btn {
+            background: #111827;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        nav .btn:hover { opacity: 0.85; }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        main h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            max-width: 640px;
+        }
+        main h1 span { color: #6366f1; }
+        main p {
+            margin-top: 1.25rem;
+            font-size: 1.125rem;
+            color: #6b7280;
+            max-width: 480px;
+            line-height: 1.6;
+        }
+        main .actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+        main .actions .primary {
+            background: #111827;
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        main .actions .primary:hover { opacity: 0.85; }
+        main .actions .secondary {
+            background: transparent;
+            color: #111827;
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem 1.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        main .actions .secondary:hover { border-color: #d1d5db; }
+        footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            font-size: 0.8125rem;
+            color: #9ca3af;
+        }
+        footer a {
+            text-decoration: none;
+            color: #9ca3af;
+            transition: color 0.15s;
+        }
+        footer a:hover { color: #6b7280; }
+        @media (max-width: 640px) {
+            main h1 { font-size: 2.25rem; }
+            nav .links { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">Brand<span>.</span></div>
+        <div class="links">
+            <a href="/">Home</a>
+            <a href="/about.html">About</a>
+            <a href="/privacy-policy.html">Privacy</a>
+            <a href="/terms.html">Terms</a>
+        </div>
+        <button class="btn">Get Started</button>
+    </nav>
+    <main>
+        <h1>{{ template_title }}</h1>
+        <p>{{ template_description }}</p>
+        <div class="actions">
+            <button class="primary">Get Started</button>
+            <button class="secondary">Learn More</button>
+        </div>
+    </main>
+    <footer>
+        <span>&copy; 2026 Brand. All rights reserved.</span>
+        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Service — {{ template_title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            color: #111827;
+        }
+        .back {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .back a {
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            transition: color 0.15s;
+        }
+        .back a:hover { color: #111827; }
+        .container {
+            flex: 1;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+        }
+        .container h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+        .container h2 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.75rem; color: #374151; }
+        .container p { color: #6b7280; line-height: 1.7; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="back">
+        <a href="/">&larr; Back</a>
+    </div>
+    <div class="container">
+        <h1>Terms of Service</h1>
+        <p>Last updated: January 2026</p>
+        <h2>Acceptance of Terms</h2>
+        <p>By accessing and using this service, you agree to be bound by these terms. If you do not agree, please do not use the service.</p>
+        <h2>Use of Service</h2>
+        <p>You agree to use the service for lawful purposes only and in accordance with these terms. You may not misuse or interfere with the service.</p>
+        <h2>Limitation of Liability</h2>
+        <p>We are not liable for any damages arising from your use of the service. The service is provided "as is" without warranty of any kind.</p>
+    </div>
+</body>
+</html>
