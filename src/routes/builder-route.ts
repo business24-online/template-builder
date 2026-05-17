@@ -1,6 +1,10 @@
 import { Router } from "express"
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
-import { join, basename } from "node:path"
+import { join, dirname, basename } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(readFileSync(join(__dirname, "..", "..", "package.json"), "utf-8"))
 
 export function createBuilderRouter(schema: Record<string, unknown>, schemaPath: string, templatePath: string) {
   const router = Router()
@@ -18,7 +22,11 @@ export function createBuilderRouter(schema: Record<string, unknown>, schemaPath:
   }
 
   router.get("/project-metadata", (_req, res) => {
-    res.json({ template: basename(templatePath) })
+    res.json({
+      template: basename(templatePath),
+      version: pkg.version,
+      installPath: process.argv[1],
+    })
   })
 
   router.get("/schema", (_req, res) => {

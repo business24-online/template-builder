@@ -319,6 +319,7 @@
       var segs = parsePath(el.name)
       var val = data
       var found = true
+      var lastPrimitive = undefined
       for (var s = 0; s < segs.length; s++) {
         var seg = segs[s]
         if (seg.index !== undefined) {
@@ -326,12 +327,20 @@
           var arr = val[seg.key]
           if (seg.index >= arr.length) { found = false; break }
           val = arr[seg.index]
+          if (typeof val !== 'object' && val !== null) {
+            lastPrimitive = val
+          }
         } else {
           if (val === null || typeof val !== 'object' || !(seg.key in val)) {
-            found = false
+            // If the previous step gave us a primitive from an array, it's the
+            // actual value — the extra key is a schema field name for a single-field
+            // repeatable group (e.g. data has flat strings, but field is skills[0].skill)
+            if (lastPrimitive !== undefined) { val = lastPrimitive; found = true }
+            else { found = false }
             break
           }
           val = val[seg.key]
+          lastPrimitive = undefined
         }
       }
 
@@ -521,7 +530,9 @@
       if (!data) return
 
       // ── Auto-detect repeatable instance counts from saved data ─────
-      if (setRepeatInstances && schema) {
+      // Only runs once on initial load — subsequent add/remove is managed
+      // by the builder UI and must not be overridden by saved data.
+      if (!_initialRecountDone && setRepeatInstances && schema) {
         var counts = {}
         walkRepeatContainers(schema, '', function (_id, dataPath) {
           var val = data
@@ -548,6 +559,14 @@
           // with updated currentCounts, and this time needsUpdate
           // will be false, falling through to applyFormData below.
           return
+        }
+
+        // Only mark initial recount done when the schema actually has
+        // repeatable containers. The initial render may have an empty
+        // schema (still loading), and we must not block the subsequent
+        // render that has the real schema from auto-detecting instances.
+        if (Object.keys(counts).length > 0 || (schema && schema.length > 0)) {
+          _initialRecountDone = true
         }
       }
 
@@ -579,6 +598,25 @@
    * Calls callback(_id, dataPath) for each, where dataPath is an array
    * of keys to walk into the form data object.
    */
+  var _initialRecountDone = false
+
+  window.resetRecountFlag = function () { _initialRecountDone = false }
+
+  window.recountRepeatInstances = function (schema, data) {
+    var counts = {}
+    walkRepeatContainers(schema, '', function (_id, dataPath) {
+      var val = data
+      for (var i = 0; i < dataPath.length; i++) {
+        if (!val || typeof val !== 'object') { val = undefined; break }
+        val = val[dataPath[i]]
+      }
+      if (Array.isArray(val) && val.length > 0) {
+        counts[_id] = val.length
+      }
+    })
+    return counts
+  }
+
   function walkRepeatContainers(items, prefix, fn) {
     for (var i = 0; i < items.length; i++) {
       var item = items[i]
