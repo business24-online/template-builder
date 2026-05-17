@@ -191,7 +191,7 @@
           var innerSty = item.el_attrs?.style ? ' style="' + item.el_attrs.style + '"' : ''
           var inner = '<div' + innerCls + innerSty + '>' + f + '</div>'
           var removeBtn = editable
-            ? '<button data-action="remove-repeat" data-id="' + item._id + '" class="text-xs px-2 py-1 bg-red-50 text-red-500 border border-red-200 rounded hover:bg-red-100 transition-colors">Remove</button>'
+            ? '<button data-action="remove-repeat" data-id="' + item._id + '" data-key="' + item.key + '" data-index="' + i + '" class="text-xs px-2 py-1 bg-red-50 text-red-500 border border-red-200 rounded hover:bg-red-100 transition-colors">Remove</button>'
             : ''
           groups += '<div style="position:relative;padding:12px;margin-bottom:8px;border:1px dashed #d1d5db;border-radius:8px">' + removeBtn + inner + '</div>'
         }
@@ -526,6 +526,14 @@
   window.initFormPersistence = function initFormPersistence(rootEl, schema, currentCounts, setRepeatInstances) {
     if (!rootEl) return
 
+    // Use pending formdata (from remove handler) instead of fetching
+    if (_pendingFormData) {
+      var data = _pendingFormData
+      _pendingFormData = null
+      applyFormData(rootEl, data)
+      return
+    }
+
     loadFormData(function (err, data) {
       if (!data) return
 
@@ -599,6 +607,9 @@
    * of keys to walk into the form data object.
    */
   var _initialRecountDone = false
+  var _pendingFormData = null
+
+  window.setPendingFormData = function (data) { _pendingFormData = data }
 
   window.resetRecountFlag = function () { _initialRecountDone = false }
 

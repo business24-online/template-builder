@@ -1410,7 +1410,22 @@ const app = {
       if (action === 'remove-repeat') {
         e.stopImmediatePropagation()
         const id = t.getAttribute('data-id')
+        const key = t.getAttribute('data-key')
+        const idx = parseInt(t.getAttribute('data-index'), 10)
         setTimeout(() => {
+          const formRoot = $('[data-form-root]')
+          if (formRoot && key !== null && !isNaN(idx)) {
+            const data = collectFormData(formRoot)
+            if (Array.isArray(data[key]) && idx < data[key].length) {
+              data[key].splice(idx, 1)
+              setPendingFormData(data)
+              fetch('/template-builder/formdata', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              })
+            }
+          }
           this.store.mutate(s=>{
             const c = s.repeatInstances[id]||0
             if (c > 0) s.repeatInstances[id] = c - 1
