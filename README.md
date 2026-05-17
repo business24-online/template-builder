@@ -64,3 +64,7 @@ Opens two URLs:
 5. Your template's HTML renders the form data using Liquid variables
 
 The builder lets you create input fields (text, email, select, file, etc.), view fields (labels, paragraphs, images), and repeatable container sections — all through a visual drag-free interface.
+
+## Documentation
+
+See [docs/index.md](docs/index.md) for the full reference on `schema.json`, `.formdata.json`, and Liquid template syntax.
