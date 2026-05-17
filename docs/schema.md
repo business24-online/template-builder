@@ -154,6 +154,8 @@ A container groups fields together. It uses `property: "group"`.
 }
 ```
 
+**Important:** A repeatable group always produces an array of **objects** in `.formdata.json`, one per instance. Each object's keys are the child field keys defined in `fields`. This applies even if the group has only one child field — the array items are still objects, never flat values.
+
 ### With a repeatable container (e.g. work experience)
 
 ```json
