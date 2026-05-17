@@ -5,15 +5,18 @@ Visual form builder for creating Liquid-based templates. Design schemas visually
 ## Install
 
 ```sh
-# Globally from GitHub
+# From npm registry (recommended)
+npm i -g @business24-online/template-builder
+
+# From GitHub
 npm i -g git+https://github.com/business24-online/template-builder.git
 
-# Or from local directory
+# From local directory
 git clone https://github.com/business24-online/template-builder.git
 cd template-builder
 npm i -g .
 
-# Or try without installing
+# Try without installing
 npx @business24-online/template-builder dev
 ```
 
