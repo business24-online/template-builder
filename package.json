@@ -33,7 +33,7 @@
     "playwright": "^1.60.0",
     "typescript": "^5.8.3"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Visual form builder for creating Liquid-based templates. Design schemas visually, preview forms in real-time, and generate template projects.",
   "main": "index.js",
   "keywords": [
