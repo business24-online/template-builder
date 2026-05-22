@@ -1,7 +1,13 @@
 import express from "express";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, watch } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  watch,
+} from "node:fs";
 import { join, dirname, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Liquid } from "liquidjs";
@@ -117,8 +123,11 @@ export function startServer(
       return;
     }
     let raw = readFileSync(filePath, "utf-8");
-    raw = raw.replace(/<\s*\/\s*body\s*>/i, '<script src="/template-builder/js/ws.js"></script></body>');
-    const ctx = loadFormdata();
+    raw = raw.replace(
+      /<\s*\/\s*body\s*>/i,
+      '<script src="/template-builder/js/ws.js"></script></body>',
+    );
+    const ctx = { formCtx: loadFormdata() };
     liquid
       .parseAndRender(raw, ctx)
       .then((out) => {

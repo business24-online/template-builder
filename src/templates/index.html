@@ -564,7 +564,7 @@ const app = {
     return parts.join(', ')||'—'
   },
 
-  // ── Flat field paths ──────────────────────────────────────────────────────
+  // ── Flat field paths (prefixed with formCtx.) ──────────────────────────────
   flatFieldPaths() {
     const result = []
     const walk = (items,prefix) => {
@@ -573,9 +573,9 @@ const app = {
           const p = prefix+item.key
           const childPrefix = item.repeatable ? p+'[].' : p+'.'
           walk(item.fields||[],childPrefix)
-          if (!item.fields||item.fields.length===0) result.push({path:p+(item.repeatable?'[]':''),type:'container'})
+          if (!item.fields||item.fields.length===0) result.push({path:'formCtx.'+p+(item.repeatable?'[]':''),type:'container'})
         } else if (item.property!=='view_field') {
-          result.push({path:prefix+item.key,type:item.type})
+          result.push({path:'formCtx.'+prefix+item.key,type:item.type})
         }
       }
     }

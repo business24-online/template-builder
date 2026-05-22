@@ -36,15 +36,15 @@ Create `.formdata.json` in your template directory with any text editor. The str
 
 ## Mapping to Liquid Template Variables
 
-The entire `.formdata.json` is loaded as the Liquid rendering context. Field keys become directly accessible as Liquid variables:
+`.formdata.json` is loaded into the Liquid rendering context as a `formCtx` object. All form fields are accessed via `formCtx`:
 
 | .formdata.json | Liquid Template Syntax |
 |---|---|
-| `{ "title": "Hello" }` | `{{ title }}` |
-| `{ "contact": { "email": "a@b.com" } }` | `{{ contact.email }}` |
-| `{ "items": [{ "name": "A" }, { "name": "B" }] }` | `{% for item in items %}{{ item.name }}{% endfor %}` |
-| `{ "photo": "/uploads/uuid.jpg" }` | `<img src="{{ photo }}">` |
-| `{ "bio": "Hello\nWorld" }` | `{{ bio | newline_to_br }}` |
+| `{ "title": "Hello" }` | `{{ formCtx.title }}` |
+| `{ "contact": { "email": "a@b.com" } }` | `{{ formCtx.contact.email }}` |
+| `{ "items": [{ "name": "A" }, { "name": "B" }] }` | `{% for item in formCtx.items %}{{ item.name }}{% endfor %}` |
+| `{ "photo": "/uploads/uuid.jpg" }` | `<img src="{{ formCtx.photo }}">` |
+| `{ "bio": "Hello\nWorld" }` | `{{ formCtx.bio | newline_to_br }}` |
 
 ## Naming Convention
 
@@ -64,7 +64,7 @@ The entire `.formdata.json` is loaded as the Liquid rendering context. Field key
 }
 ```
 
-Renders: `{{ template_title }}` → "My Portfolio"
+Renders: `{{ formCtx.template_title }}` → "My Portfolio"
 
 ### With a non-repeatable container
 
@@ -79,7 +79,7 @@ Renders: `{{ template_title }}` → "My Portfolio"
 }
 ```
 
-Renders: `{{ contact.email }}` → "user@example.com"
+Renders: `{{ formCtx.contact.email }}` → "user@example.com"
 
 ### With a repeatable container (work experience)
 
@@ -107,7 +107,7 @@ Renders: `{{ contact.email }}` → "user@example.com"
 
 Template usage:
 ```liquid
-{% for exp in experiences %}
+{% for exp in formCtx.experiences %}
   <div class="entry">
     <h3>{{ exp.role }} at {{ exp.company }}</h3>
     <p>{{ exp.start_date }} — {{ exp.end_date }}</p>
@@ -133,7 +133,7 @@ Even with only one child field, the repeatable container produces an array of ob
 
 Template usage — access the field key on each item:
 ```liquid
-{% for skill in skills %}
+{% for skill in formCtx.skills %}
   <li>{{ skill.skill }}</li>
 {% endfor %}
 ```
@@ -151,8 +151,8 @@ This always works the same way regardless of how many fields the container has.
 
 Template usage:
 ```liquid
-<img src="{{ avatar }}" alt="Avatar">
-<a href="{{ resume }}">Download Resume</a>
+<img src="{{ formCtx.avatar }}" alt="Avatar">
+<a href="{{ formCtx.resume }}">Download Resume</a>
 ```
 
 ### With view fields (img)
@@ -166,8 +166,8 @@ Template usage:
 
 Template usage:
 ```liquid
-<img src="{{ hero_image }}" alt="Hero">
-<p>{{ section_intro }}</p>
+<img src="{{ formCtx.hero_image }}" alt="Hero">
+<p>{{ formCtx.section_intro }}</p>
 ```
 
 ## API Endpoints

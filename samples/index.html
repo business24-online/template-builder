@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ template_title }}</title>
+    <title>{{ formCtx.template_title }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -132,8 +132,8 @@
         <button class="btn">Get Started</button>
     </nav>
     <main>
-        <h1>{{ template_title }}</h1>
-        <p>{{ template_description }}</p>
+        <h1>{{ formCtx.template_title }}</h1>
+        <p>{{ formCtx.template_description }}</p>
         <div class="actions">
             <button class="primary">Get Started</button>
             <button class="secondary">Learn More</button>
